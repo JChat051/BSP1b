@@ -1,8 +1,110 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GDPR Total Fines by Country</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    svg { background: #f4f4f4; }
+    .bar:hover { fill: orange; }
+  </style>
+</head>
+<body>
 
-<!-- Load d3.js -->
-<script src="https://d3js.org/d3.v6.js"></script>
+<h2>Total GDPR Fines by Country</h2>
+<div id="chart"></div>
 
-<!-- Create a div where the graph will take place -->
-<div id="my_dataviz"></div>
+<script>
+
+// Set chart dimensions
+const margin = { top: 40, right: 20, bottom: 150, left: 80 };
+const width = 1000 - margin.left - margin.right;
+const height = 600 - margin.top - margin.bottom;
+
+// Create SVG
+const svg = d3.select("#chart")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Load CSV
+d3.csv("gdpr_fines.csv").then(data => {
+
+  // Convert fine amounts to numbers
+  data.forEach(d => {
+    let value = d["Fine-Amount"];
+    if (!value) value = "0";
+    value = value.toString().replace(/,/g, "");
+    d.FineAmount = +value;
+  });
+
+  // Group and sum fines by country
+  const grouped = d3.rollups(
+    data,
+    v => d3.sum(v, d => d.FineAmount),
+    d => d.Country
+  );
+
+  const result = grouped.map(([Country, TotalFine]) => ({ Country, TotalFine }));
+
+  // Sort descending
+  result.sort((a, b) => b.TotalFine - a.TotalFine);
+
+  // Create scales
+  const x = d3.scaleBand()
+    .domain(result.map(d => d.Country))
+    .range([0, width])
+    .padding(0.2);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(result, d => d.TotalFine)])
+    .nice()
+    .range([height, 0]);
+
+  // Draw bars
+  svg.selectAll(".bar")
+    .data(result)
+    .enter()
+    .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.Country))
+      .attr("y", d => y(d.TotalFine))
+      .attr("width", x.bandwidth())
+      .attr("height", d => height - y(d.TotalFine))
+      .attr("fill", "#69b3a2");
+
+  // X-axis
+  svg.append("g")
+    .attr("transform", `translate(0, ${height})`)
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+      .attr("transform", "rotate(-65)")
+      .attr("text-anchor", "end");
+
+  // Y-axis
+  svg.append("g")
+    .call(d3.axisLeft(y).ticks(10).tickFormat(d3.format(",")));
+
+  // Axis labels
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 120)
+    .attr("text-anchor", "middle")
+    .text("Country");
+
+  svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -55)
+    .attr("text-anchor", "middle")
+    .text("Total Fines (€)");
+
+});
+
+</script>
+
+</body>
+</html>
