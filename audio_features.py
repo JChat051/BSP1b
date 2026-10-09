@@ -1,7 +1,7 @@
 ﻿import librosa
 import matplotlib.pyplot as plt
 
-y, sr = librosa.load("audio/track1.wav", sr=22050, mono=True)
+y, sr = librosa.load("audio/track1.mp3", sr=22050, mono=True)
 hop = 512  # frames per second = sr / hop
 
 rms = librosa.feature.rms(y=y, hop_length=hop)[0]
